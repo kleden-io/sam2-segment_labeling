@@ -1,0 +1,13 @@
+sam2:
+  config: ../sam2_configs/sam2_hiera_t.yaml
+  model: ../checkpoints/sam2_hiera_tiny.pt
+  sam2cfg: /home/carlos/kleden/segment-anything-2/sam2_configs
+
+yolo:
+  modelpath: models/yolov8s.pt
+  
+recording:
+  path: /home/carlos/kleden/vid_processing/recording
+
+save_dataset:
+  path: /home/carlos/kleden/vid_processing/
