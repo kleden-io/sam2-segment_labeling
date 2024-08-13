@@ -2,33 +2,62 @@ from segment_extraction import DetectAndSegment
 from sklearn.model_selection import train_test_split
 import yaml
 import os
+import tqdm
 import cv2
+import rerun
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
 
 class GenerateDataset:
     def __init__(self, 
-                recording_path, 
-                output_path, 
-                test_size = 0.2, 
-                val_size=0.1, 
-                random_state = 42):
+                    recording_path, 
+                    output_path,
+                    yolo_path,
+                    sam2_ckp,
+                    sam2_cfg
+                    ):
         self.recording_path = recording_path
         self.output_path = output_path
-        self.test_size = test_size
-        self.val_size = val_size
-        self.random_state = random_state
+        # self.test_size = test_size
+        # self.val_size = val_size
+        # self.random_state = random_state
+        self.segmentor = DetectAndSegment(yolo_model_path=yolo_path, 
+            sam2_checkpoint=sam2_ckp, 
+            sam2_model=sam2_cfg
+            )
 
-    def process_samples(self):
+    def process_directories(self):
 
         if not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
 
         file_list = os.listdir(self.recording_path)
+        for sample in file_list:
+            # print(sample)
+            images_list =  os.listdir(os.path.join(self.recording_path, sample, 'images'))
+            video_list = os.listdir(os.path.join(self.recording_path, sample, 'video'))
+
+            print(f"images for {sample}: ",images_list)
+            # print(f"videos for {sample}: ", video_list)
+            # print(os.path.join(self.recording_path, sample, 'video'))
+
+            for image in images_list:
+                img_path = os.path.join(self.recording_path, sample, 'images', image)
+                self.process_images(img_path)
+
+    def process_images(self, sample):
+        # self.sam2_img_inference
+        image = cv2.imread(sample)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        mask = self.segmentor.sam2_img_inference(image)
+        rerun.log("rgb_image", rerun.Image(np.array(image))) 
+        rerun.log("mask", rerun.Image(mask[0]*255))
+
+    def process_video(self, iteration, sample):
+        cap = cv2.VideoCapture(sample)
+        while (cap.isOpened()):
+            _,frame = cap.read()
+
         
-
-
 def main():
     with open('config.yaml', 'r') as file: 
         config = yaml.safe_load(file)
@@ -37,6 +66,8 @@ def main():
         sam2_checkpoint = config['sam2']['model']
         model_cfg = config['sam2']['config']
         yolo_model = config['yolo']['modelpath']
+        recording_path = config['recording']['path']
+        output_path = config['save_dataset']['path']
 
         print(sam2_checkpoint)
         print(model_cfg)
@@ -44,26 +75,41 @@ def main():
 
         #init
 
-        segmentor = DetectAndSegment(
-            yolo_model_path=yolo_model, 
-            sam2_checkpoint=sam2_checkpoint, 
-            sam2_model=model_cfg
+        # segmentor = DetectAndSegment(
+        #     yolo_model_path=yolo_model, 
+        #     sam2_checkpoint=sam2_checkpoint, 
+        #     sam2_model=model_cfg
+        #     )
+        
+        # if not os.path.exists(yolo_model):
+        #     segmentor.download_yolo_model()
+
+        # # load an image
+        # image = cv2.imread('me.jpeg')
+        # image =  cv2.resize(image, (480,720))
+        # rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # mask = segmentor.sam2_img_inference(rgb_image)
+        
+        
+        # cv2.imshow("frame", image)
+        # cv2.imshow("mask", mask[0]*255)
+        # cv2.waitKey()
+
+        rerun.init("camera_visualization_demo")
+        rerun.connect()
+        
+        gen_dataset = GenerateDataset(
+            recording_path=recording_path, 
+            output_path=output_path,
+            yolo_path=yolo_model,
+            sam2_ckp=sam2_checkpoint,
+            sam2_cfg=model_cfg
             )
         
-        if not os.path.exists(yolo_model):
-            segmentor.download_yolo_model()
+        gen_dataset.process_directories()
 
-        # load an image
-        image = cv2.imread('me.jpeg')
-        image =  cv2.resize(image, (480,720))
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        mask = segmentor.sam2_img_inference(rgb_image)
-        
-        
-        cv2.imshow("frame", image)
-        cv2.imshow("mask", mask[0]*255)
-        cv2.waitKey()
+        rerun.disconnect()
 
 
     else: 
