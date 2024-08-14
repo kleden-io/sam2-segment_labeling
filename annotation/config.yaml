@@ -11,3 +11,4 @@ recording:
 
 save_dataset:
   path: /home/carlos/kleden/vid_processing/
+  rerun: /home/carlos/kleden/vid_processing/

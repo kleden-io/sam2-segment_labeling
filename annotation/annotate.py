@@ -17,9 +17,7 @@ class GenerateDataset:
                     ):
         self.recording_path = recording_path
         self.output_path = output_path
-        # self.test_size = test_size
-        # self.val_size = val_size
-        # self.random_state = random_state
+
         self.segmentor = DetectAndSegment(yolo_model_path=yolo_path, 
             sam2_checkpoint=sam2_ckp, 
             sam2_model=sam2_cfg
@@ -32,30 +30,37 @@ class GenerateDataset:
 
         file_list = os.listdir(self.recording_path)
         for sample in file_list:
-            # print(sample)
             images_list =  os.listdir(os.path.join(self.recording_path, sample, 'images'))
             video_list = os.listdir(os.path.join(self.recording_path, sample, 'video'))
-
-            print(f"images for {sample}: ",images_list)
-            # print(f"videos for {sample}: ", video_list)
-            # print(os.path.join(self.recording_path, sample, 'video'))
-
+            print(f"Got for {sample}")
             for image in images_list:
                 img_path = os.path.join(self.recording_path, sample, 'images', image)
-                self.process_images(img_path)
+                # self.process_images(img_path)
+                print(img_path)
 
-    def process_images(self, sample):
-        # self.sam2_img_inference
+            for video in video_list:
+                video_path = os.path.join(self.recording_path, sample, 'video', video)
+                self.process_video(sample=video_path, iteration=1)
+
+    def process_images(self, sample, iteration):
         image = cv2.imread(sample)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         mask = self.segmentor.sam2_img_inference(image)
-        rerun.log("rgb_image", rerun.Image(np.array(image))) 
-        rerun.log("mask", rerun.Image(mask[0]*255))
+        rerun.log("image", rerun.Image(np.array(image))) 
+        # rerun.log("mask", rerun.Tensor(mask[0]*255))
+        rerun.log("image/mask", rerun.SegmentationImage(mask[0]*255))
 
-    def process_video(self, iteration, sample):
+    def process_video(self, sample, iteration):
         cap = cv2.VideoCapture(sample)
+        print(f"Working with path {sample}")
         while (cap.isOpened()):
-            _,frame = cap.read()
+            ret,frame = cap.read()
+            if not ret:
+                break
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mask = self.segmentor.sam2_img_inference(frame)
+            rerun.log("image", rerun.Image(np.array(frame)))
+            rerun.log("image/mask", rerun.SegmentationImage(mask[0]*255)) 
 
         
 def main():
