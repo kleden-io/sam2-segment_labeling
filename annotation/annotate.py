@@ -1,5 +1,6 @@
 from segment_extraction import DetectAndSegment
-from sklearn.model_selection import train_test_split
+from keypoint_measure import EstimateKeypoints
+import mediapipe.python.solutions.pose as mp_pose
 import yaml
 import os
 import tqdm
@@ -22,6 +23,9 @@ class GenerateDataset:
             sam2_checkpoint=sam2_ckp, 
             sam2_model=sam2_cfg
             )
+        
+        self.tracker_landmark = EstimateKeypoints()
+
 
     def process_directories(self):
 
@@ -52,15 +56,38 @@ class GenerateDataset:
 
     def process_video(self, sample, iteration):
         cap = cv2.VideoCapture(sample)
+        recommended = False
         print(f"Working with path {sample}")
-        while (cap.isOpened()):
+        for i,_ in enumerate(iter(lambda: cap.read(), (False, None))):
             ret,frame = cap.read()
             if not ret:
                 break
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            self.tracker_landmark.input_image(frame)
+
+            landmark_pose = self.tracker_landmark.get_keypoints()
+            if i < 20 or not recommended:
+                try:
+                    recommendation = self.tracker_landmark.get_recommendation()
+                    recommended = True
+                    print("Recomendation done")
+                except Exception as e:
+                    print(e)
+
             mask = self.segmentor.sam2_img_inference(frame)
             rerun.log("image", rerun.Image(np.array(frame)))
             rerun.log("image/mask", rerun.SegmentationImage(mask[0]*255)) 
+            rerun.log("image/pose/points",
+                    rerun.Points2D(
+                        landmark_pose, 
+                        keypoint_ids=mp_pose.PoseLandmark))
+            if recommended:
+                rerun.log("description", 
+                            rerun.TextDocument(str(recommendation).strip(), 
+                                               media_type=rerun.MediaType.MARKDOWN), 
+                                               static=True)
+            
 
         
 def main():
