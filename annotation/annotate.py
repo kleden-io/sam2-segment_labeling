@@ -105,29 +105,6 @@ def main():
         print(model_cfg)
         print(yolo_model)
 
-        #init
-
-        # segmentor = DetectAndSegment(
-        #     yolo_model_path=yolo_model, 
-        #     sam2_checkpoint=sam2_checkpoint, 
-        #     sam2_model=model_cfg
-        #     )
-        
-        # if not os.path.exists(yolo_model):
-        #     segmentor.download_yolo_model()
-
-        # # load an image
-        # image = cv2.imread('me.jpeg')
-        # image =  cv2.resize(image, (480,720))
-        # rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # mask = segmentor.sam2_img_inference(rgb_image)
-        
-        
-        # cv2.imshow("frame", image)
-        # cv2.imshow("mask", mask[0]*255)
-        # cv2.waitKey()
-
         rerun.init("camera_visualization_demo")
         rerun.connect()
         
