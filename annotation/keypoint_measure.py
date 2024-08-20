@@ -222,7 +222,8 @@ class EstimateKeypoints:
             - Estimated sleeve size: {round(cm_sleeve, 2)} cm
             """
         return RECOMMENDATION
-    
+
+ 
 """
 rr.init("camera_visualization_demo")
 rr.connect()
