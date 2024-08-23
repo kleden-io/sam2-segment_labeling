@@ -45,7 +45,7 @@ class EstimateKeypoints:
             if row[0] == index:
                 return row[1]
         return None
-    
+        
     def track2Dpose(self, results, img_width ,img_height):
         if results.pose_landmarks is None or len(results.pose_landmarks)==0:
             return None
@@ -96,6 +96,10 @@ class EstimateKeypoints:
                 np.linalg.norm( right_shoulder - left_shoulder )
             )
 
+            self.nose_point = self.get_coordinates_by_index(keypoints_array, 0)
+            right_ear = np.array(self.get_coordinates_by_index(keypoints_array, 8))
+            self.distance_face = np.linalg.norm(np.array(self.nose_point) - right_ear)
+
             return hip_distance, left_leg_distance, right_leg_distance, sleeve_distance, chest_distance
         
     def draw_landmarks_on_image(self, rgb_image, detection_result):
@@ -123,6 +127,24 @@ class EstimateKeypoints:
                 solutions.drawing_styles.get_default_pose_landmarks_style(),
             )
         return annotated_image
+
+    def annonimaze_face(self, image):
+        x, y = int(self.nose_point[0]), int(self.nose_point[1])
+        half_width = self.distance_face // 2
+        top_left = (int(x - half_width), int(y - half_width))
+        bottom_right = (int(x + half_width), int(y + half_width))
+
+        roi = image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
+
+        pixelated_roi = cv2.resize(roi, (10, 10), interpolation=cv2.INTER_LINEAR)
+        pixelated_roi = cv2.resize(pixelated_roi, (int(self.distance_face), int(self.distance_face)), interpolation=cv2.INTER_NEAREST)
+
+        try: 
+            image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = pixelated_roi
+        except:
+            print("error on roi")
+        
+        return image
         
     def estimate_pant_size(self, hip_measure):
         """

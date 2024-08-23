@@ -76,6 +76,7 @@ class GenerateDataset:
                     print(e)
 
             mask = self.segmentor.sam2_img_inference(frame)
+            frame = self.tracker_landmark.annonimaze_face(frame)
             rerun.log("image", rerun.Image(np.array(frame)))
             rerun.log("image/mask", rerun.SegmentationImage(mask[0]*255)) 
             rerun.log("image/pose/points",
